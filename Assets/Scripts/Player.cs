@@ -8,9 +8,10 @@ public class Player : MovingObject
 {
     public float restartLevelDelay = 1f;      
     public int pointsPerFood = 10;           
-    public int pointsPerSoda = 20;           
+    public int pointsPerSoda = 5;           
     public int wallDamage = 1;         
-    public Text foodText;           
+    public Text foodText;
+    public Text sodaText;
     public AudioClip moveSound1;            
     public AudioClip moveSound2;           
     public AudioClip eatSound1;            
@@ -20,70 +21,72 @@ public class Player : MovingObject
     public AudioClip gameOverSound;       
 
     private Animator animator;              
-    private int food;                     
-#if UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
-        private Vector2 touchOrigin = -Vector2.one;	//Used to store location of screen touch origin for mobile controls.
-#endif
+    private int food;
+    private int sodas;
     protected override void Start()
     {
         animator = GetComponent<Animator>();
         food = gameManager.instance.playerFoodPoints;
+        sodas = gameManager.instance.playerSodas;
         foodText.text = "Food: " + food;
+        sodaText.text = "Soda: " + sodas;
         base.Start();
     }
     private void OnDisable()
     {
         gameManager.instance.playerFoodPoints = food;
+        gameManager.instance.playerSodas = sodas;
     }
-
+    private void CheckIfGameOver()
+    {
+        if (food <= 0)
+        {
+            SoundManager.instance.PlaySingle(gameOverSound);
+            SoundManager.instance.musicSource.Stop();
+            gameManager.instance.GameOver();
+        }
+    }
 
     private void Update()
     {
-        if (!gameManager.instance.playersTurn) return;
-
+        if (!gameManager.instance.playersTurn)
+        {
+            return;
+        }
         int horizontal = 0;  
         int vertical = 0;     
-        
-#if UNITY_STANDALONE || UNITY_WEBPLAYER
-        
-        horizontal = (int)(Input.GetAxisRaw("Horizontal"));
-        vertical = (int)(Input.GetAxisRaw("Vertical"));
+        horizontal = (int)Input.GetAxisRaw("Horizontal");
+        vertical = (int)Input.GetAxisRaw("Vertical");
         if (horizontal != 0)
         {
             vertical = 0;
         }
-#elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
-			if (Input.touchCount > 0)
-			{
-				Touch myTouch = Input.touches[0];
-				if (myTouch.phase == TouchPhase.Began)
-				{
-					touchOrigin = myTouch.position;
-				}
-				else if (myTouch.phase == TouchPhase.Ended && touchOrigin.x >= 0)
-				{
-					Vector2 touchEnd = myTouch.position;
-					float x = touchEnd.x - touchOrigin.x;
-					float y = touchEnd.y - touchOrigin.y;
-					touchOrigin.x = -1;
-					if (Mathf.Abs(x) > Mathf.Abs(y))
-						horizontal = x > 0 ? 1 : -1;
-					else
-						vertical = y > 0 ? 1 : -1;
-				}
-			}
-			
-#endif
         if (horizontal != 0 || vertical != 0)
         {
             AttemptMove<Wall>(horizontal, vertical);
         }
+        bool drinkSoda;
+        drinkSoda = Input.GetKeyDown("x");
+        if (drinkSoda && sodas>0)
+        {
+            sodas--;
+            SoundManager.instance.RandomizeSfx(drinkSound1, drinkSound2);
+            food += pointsPerSoda;
+            foodText.text = "+" + pointsPerSoda + " Food: " + food;
+            sodaText.text = "Soda : " + sodas;
+        }
     }
     protected override void AttemptMove<T>(int xDir, int yDir)
     {
-        food--;
+        if(food > 25) {
+            food = food - 2;
+        }
+        else {
+            food--;
+        }
         foodText.text = "Food: " + food;
-        
+        sodaText.text = "Sodas: " + sodas;
+
         base.AttemptMove<T>(xDir, yDir);
         RaycastHit2D hit;
         if (Move(xDir, yDir, out hit))
@@ -111,41 +114,31 @@ public class Player : MovingObject
         else if (other.tag == "Food")
         {
             food += pointsPerFood;
+            other.gameObject.SetActive(false);
             foodText.text = "+" + pointsPerFood + " Food: " + food;
             SoundManager.instance.RandomizeSfx(eatSound1, eatSound2);
-            other.gameObject.SetActive(false);
         }
         
         else if (other.tag == "Soda")
         {
-            food += pointsPerSoda;
-            foodText.text = "+" + pointsPerSoda + " Food: " + food;
-            SoundManager.instance.RandomizeSfx(drinkSound1, drinkSound2);
+            sodas++;
+            sodaText.text = "+ 1 " + "Sodas: " + sodas;
             other.gameObject.SetActive(false);
         }
     }
     
     private void Restart()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
     public void LoseFood(int loss)
     {
         animator.SetTrigger("playerHit");
         food -= loss;
+        sodas--;
         foodText.text = "-" + loss + " Food: " + food;
+        sodaText.text = "-" + 1 + " Food: " + sodas;
         CheckIfGameOver();
-    }
-
-
-    private void CheckIfGameOver()
-    {
-        if (food <= 0)
-        {
-            SoundManager.instance.PlaySingle(gameOverSound);
-            SoundManager.instance.musicSource.Stop();
-            gameManager.instance.GameOver();
-        }
     }
 }

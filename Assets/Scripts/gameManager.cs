@@ -7,15 +7,17 @@ using UnityEngine.UI;
 public class gameManager : MonoBehaviour {
     public float levelStartDelay = 2f;                      
     public float turnDelay = 0.1f;                          
-    public int playerFoodPoints = 100;                      
-    public static gameManager instance = null;              
+    public int playerFoodPoints = 100;
+    public int playerSodas = 0;
+    public static gameManager instance = null;     
+    
     [HideInInspector] public bool playersTurn = true;       
 
 
     private Text levelText;
     private GameObject levelImage;                   
-    private boardManager boardScript;         
-    private int level = 1;                    
+    private boardManager boardScript;
+    private int level = 0;                    
     private List<Enemy> enemies;                  
     private bool enemiesMoving;                            
     private bool doingSetup = true;                 
@@ -30,21 +32,13 @@ public class gameManager : MonoBehaviour {
         DontDestroyOnLoad(gameObject);
         enemies = new List<Enemy>();
         boardScript = GetComponent<boardManager>();
+    }
+    void OnLevelFinishedLoading(Scene scene, LoadSceneMode mode)
+    {
+        level++;
         InitGame();
     }
-   
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static public void CallbackInitialization()
-    {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-    
-    static private void OnSceneLoaded(Scene arg0, LoadSceneMode arg1)
-    {
-        instance.level++;
-        instance.InitGame();
-    }
-    
+
     void InitGame()
     {
         doingSetup = true;
@@ -100,4 +94,13 @@ public class gameManager : MonoBehaviour {
         playersTurn = true;
         enemiesMoving = false;
     }
+
+private void OnEnable()
+{
+    SceneManager.sceneLoaded += OnLevelFinishedLoading;
+}
+private void OnDisable()
+{
+    SceneManager.sceneLoaded -= OnLevelFinishedLoading;
+}
 }

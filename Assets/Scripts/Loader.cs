@@ -11,7 +11,7 @@ public class Loader : MonoBehaviour {
     {
         if (gameManager.instance == null)
             Instantiate(GameManager);
-        if (SoundManager.instance = null)
+        if (SoundManager.instance == null)
             Instantiate(soundManager);
     }
 }
